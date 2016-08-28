@@ -49,10 +49,11 @@ public class EedleCom
         nw = new NetworkWriter(l,sc, shared, csM, onError);
     }
 
-    public void send(byte[] data) throws ConnectionException {
-        if(!isConnected())
-            throw new ConnectionException("disconnesso");
-        nw.send(data);
+    public void send(byte[] data) {
+        if(isConnected())
+            nw.send(data);
+        //Do nothing otherwise, disconnection has already spotted in onError runnable, also client will know if message
+        //arrived by receiving an acknowledgment by server, it is the only secure way to be sure the message has arrived.
     }
 
     public boolean isConnected() {
