@@ -51,8 +51,6 @@ public class EedleCom
     }
 
     public void send(Message data) {
-        if(isSending())
-            new Exception("Errore: stai inviando più di un messaggio alla volta!").printStackTrace();
         nw.send(data);
         //Do nothing otherwise, disconnection has already spotted in onError runnable, also client will know if message
         //arrived by receiving an acknowledgment by server, it is the only secure way to be sure the message has arrived.
