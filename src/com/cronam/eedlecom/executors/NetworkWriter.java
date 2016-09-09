@@ -2,29 +2,38 @@ package com.cronam.eedlecom.executors;
 
 import com.cronam.eedlecom.Logger;
 import com.cronam.eedlecom.exceptions.ConnectionException;
+import com.cronam.eedlecom.executors.messages.Message;
+import com.cronam.eedlecom.executors.queueimpl.QueueImpl;
 
 import java.io.OutputStream;
-import java.net.Socket;
 import java.nio.ByteBuffer;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Semaphore;
 
 public class NetworkWriter extends NetworkThread
 {
     private OutputStream os;
 
-    Queue<byte[]> qq = new LinkedList<>();
-    Semaphore qqM = new Semaphore(1, true);
+    QueueImpl qq;
     Semaphore qqS = new Semaphore(0, true);
 
     protected String getIdentifier() {
         return "writer-"+Thread.currentThread().getId();
     }
 
-    public NetworkWriter(Logger l, SocketCreator sc, SocketHolder s, Semaphore csM, Runnable onErr){
+    public NetworkWriter(Logger l, SocketCreator sc, SocketHolder s, Semaphore csM, Runnable onErr, QueueImpl q){
         super(l, sc, s, csM, onErr);
+        qq = q;
+
+
+        Message m = null;
+        try {m = qq.pull();} catch (Throwable t){t.printStackTrace();}
+        if(m != null)
+        {
+            log.Log(getIdentifier()+":[NetworkWriter] must send a message!");
+            send(m);
+        }
+        else
+            log.Log(getIdentifier()+":[NetworkWriter] no messages must be sent");
         log.Log(getIdentifier()+":[NetworkWriter] NetworkWriter(...)");
     }
 
@@ -47,13 +56,11 @@ public class NetworkWriter extends NetworkThread
         }
     }
 
-    public void send(byte[] data) {
+    public void send(Message data) {
         log.Log(getIdentifier()+":[NetworkWriter] Adding data to queue");
         try
         {
-            qqM.acquire();
-            try{qq.add(data);}
-            finally{qqM.release();}
+            qq.add(data);
             qqS.release();
         }
         catch (Throwable t){t.printStackTrace();}
@@ -64,10 +71,11 @@ public class NetworkWriter extends NetworkThread
         os = getOS();
     }
 
+    public boolean isSending() throws Throwable {
+        return qq.pull() != null;
+    }
     protected void repeat() throws Throwable {
         qqS.acquire();
-        qqM.acquire();
-        try{_send(qq.remove());}
-        finally{qqM.release();}
+        _send(qq.pull().serialize());
     }
 }

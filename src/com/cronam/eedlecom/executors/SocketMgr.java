@@ -38,11 +38,6 @@ public abstract class SocketMgr
         catch(InterruptedException e){e.printStackTrace();}
     }
 
-    protected void setConnSocketTimeout(int so_tout) throws SocketException{
-        log.Log(getIdentifier() +":[SocketMgr] set timeout: "+so_tout);
-        sharedSocket.s.setSoTimeout(so_tout);
-    }
-
     protected InputStream getIS() throws IOException {
         log.Log(getIdentifier()+":[SocketMgr] get inputstream");
         return sharedSocket.s.getInputStream();

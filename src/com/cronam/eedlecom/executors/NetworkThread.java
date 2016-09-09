@@ -31,9 +31,9 @@ public abstract class NetworkThread extends SocketMgr
                 }
                 catch(Throwable t)
                 {
-                    log.Log(getIdentifier()+":[NetworkThread] error occurred in begin() or repeat()");
-                    onError();
                     t.printStackTrace();
+                    log.Log(getIdentifier()+":[NetworkThread] error occurred in begin() or repeat() msg:"+t.getMessage()+" lmes: "+t.getLocalizedMessage()+" cause: "+t.getCause());
+                    onError();
                 }
                 log.Log(getIdentifier()+":[NetworkThread] thread almost ended, stop calling!");
                 stop();

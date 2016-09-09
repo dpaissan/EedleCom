@@ -1,18 +1,18 @@
 package com.cronam.eedlecom;
 
-import com.cronam.eedlecom.exceptions.ConnectionException;
 import com.cronam.eedlecom.executors.*;
+import com.cronam.eedlecom.executors.messages.Message;
+import com.cronam.eedlecom.executors.queueimpl.QueueImpl;
 
 import java.io.IOException;
-import java.net.ConnectException;
 import java.net.Socket;
-import java.util.Queue;
 import java.util.concurrent.Semaphore;
 
 public class EedleCom
 {
     NetworkReader nr;
     NetworkWriter nw;
+    boolean ackSystem;
 
     public void setSoTimeout(int tmt) {
         nr.setSoTimeout(tmt);
@@ -21,16 +21,16 @@ public class EedleCom
         return nr.getSoTimeout();
     }
 
-    public EedleCom(Logger l, final RunnableMsgIn rmi, final Runnable onError, final Socket s) {
+    public EedleCom(boolean ackSystem, Logger l, final RunnableMsgIn rmi, final Runnable onError, QueueImpl qq, final Socket s) {
         SocketCreator sc = new SocketCreator() {
             public Socket getSocket() {
                 return s;
             }
         };
 
-        _connect(l,rmi, sc, onError);
+        _connect(ackSystem, l,rmi, sc, onError, qq);
     }
-    public EedleCom(Logger l, final RunnableMsgIn rmi, Runnable onError, final String ip, final int port) {
+    public EedleCom(boolean ackSystem, Logger l, final RunnableMsgIn rmi, Runnable onError, QueueImpl qq, final String ip, final int port) {
 
         SocketCreator sc = new SocketCreator(){public Socket getSocket()
         {
@@ -40,20 +40,30 @@ public class EedleCom
             return s;
         }};
 
-        _connect(l,rmi,sc, onError);
+        _connect(ackSystem, l,rmi,sc, onError, qq);
     }
-    private void _connect(Logger l, RunnableMsgIn rmi, SocketCreator sc, Runnable onError) {
+    private void _connect(boolean ackSystem, Logger l, RunnableMsgIn rmi, SocketCreator sc, Runnable onError, QueueImpl qq) {
         SocketHolder shared = new SocketHolder();
         Semaphore csM = new Semaphore(1, true);
-        nr = new NetworkReader(l,sc, shared, csM, rmi, onError);
-        nw = new NetworkWriter(l,sc, shared, csM, onError);
+        this.ackSystem = ackSystem;
+        nr = new NetworkReader(l,sc, shared, csM, rmi, onError, qq);
+        nw = new NetworkWriter(l,sc, shared, csM, onError, qq);
     }
 
-    public void send(byte[] data) {
-        if(isConnected())
-            nw.send(data);
+    public void send(Message data) {
+        if(isSending())
+            new Exception("Errore: stai inviando più di un messaggio alla volta!").printStackTrace();
+        nw.send(data);
         //Do nothing otherwise, disconnection has already spotted in onError runnable, also client will know if message
         //arrived by receiving an acknowledgment by server, it is the only secure way to be sure the message has arrived.
+    }
+
+    public boolean isSending() {
+        boolean b = false;
+        try {
+            b = nw.isSending();
+        }catch (Throwable t){t.printStackTrace();}
+        return ackSystem && b;
     }
 
     public boolean isConnected() {
