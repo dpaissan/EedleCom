@@ -4,25 +4,17 @@ import com.cronam.eedlecom.executors.messages.Message;
 
 public class SingleMexInMemoryQueue extends QueueImpl {
 
-    private Message bb = null;
+    private Message mm = null;
 
-    public Message pull() throws InterruptedException {
-        Message b;
-        mutex.acquire();
-        try{b = bb;}
-        finally{mutex.release();}
-        return b;
+    public Message _pull() {
+        return mm;
     }
 
-    public void deleteLast() throws InterruptedException {
-        mutex.acquire();
-        try{bb = null;}
-        finally{mutex.release();}
+    public void _deleteLast() {
+        mm = null;
     }
 
-    public void add(Message b) throws InterruptedException {
-        mutex.acquire();
-        try{bb = b;}
-        finally{mutex.release();}
+    public void _add(Message m) {
+        mm = m;
     }
 }

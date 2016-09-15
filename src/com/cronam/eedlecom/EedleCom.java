@@ -12,7 +12,6 @@ public class EedleCom
 {
     NetworkReader nr;
     NetworkWriter nw;
-    boolean ackSystem;
 
     public void setSoTimeout(int tmt) {
         nr.setSoTimeout(tmt);
@@ -21,16 +20,16 @@ public class EedleCom
         return nr.getSoTimeout();
     }
 
-    public EedleCom(boolean ackSystem, Logger l, final RunnableMsgIn rmi, final Runnable onError, QueueImpl qq, final Socket s) {
+    public EedleCom(Logger l, final RunnableMsgIn rmi, final Runnable onError, QueueImpl qq, final Socket s) {
         SocketCreator sc = new SocketCreator() {
             public Socket getSocket() {
                 return s;
             }
         };
 
-        _connect(ackSystem, l,rmi, sc, onError, qq);
+        _connect(l,rmi, sc, onError, qq);
     }
-    public EedleCom(boolean ackSystem, Logger l, final RunnableMsgIn rmi, Runnable onError, QueueImpl qq, final String ip, final int port) {
+    public EedleCom(Logger l, final RunnableMsgIn rmi, Runnable onError, QueueImpl qq, final String ip, final int port) {
 
         SocketCreator sc = new SocketCreator(){public Socket getSocket()
         {
@@ -40,28 +39,27 @@ public class EedleCom
             return s;
         }};
 
-        _connect(ackSystem, l,rmi,sc, onError, qq);
+        _connect(l,rmi,sc, onError, qq);
     }
-    private void _connect(boolean ackSystem, Logger l, RunnableMsgIn rmi, SocketCreator sc, Runnable onError, QueueImpl qq) {
+    private void _connect(Logger l, RunnableMsgIn rmi, SocketCreator sc, Runnable onError, QueueImpl qq) {
         SocketHolder shared = new SocketHolder();
         Semaphore csM = new Semaphore(1, true);
-        this.ackSystem = ackSystem;
         nr = new NetworkReader(l,sc, shared, csM, rmi, onError, qq);
         nw = new NetworkWriter(l,sc, shared, csM, onError, qq);
     }
 
     public void send(Message data) {
         nw.send(data);
-        //Do nothing otherwise, disconnection has already spotted in onError runnable, also client will know if message
-        //arrived by receiving an acknowledgment by server, it is the only secure way to be sure the message has arrived.
     }
 
-    public boolean isSending() {
+    public boolean isSending(boolean requestsOnly) {
         boolean b = false;
         try {
-            b = nw.isSending();
+            Message m = nw.getLast();
+            if(m != null && (!requestsOnly || m.mustBeAcked()))
+                b = true;
         }catch (Throwable t){t.printStackTrace();}
-        return ackSystem && b;
+        return b;
     }
 
     public boolean isConnected() {

@@ -71,8 +71,9 @@ public class NetworkWriter extends NetworkThread
         os = getOS();
     }
 
-    public boolean isSending() throws Throwable {
-        return qq.pull() != null;
+    public Message getLast() throws Throwable
+    {
+        return qq.pull();
     }
     protected void repeat() throws Throwable {
         qqS.acquire();
